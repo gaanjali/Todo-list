@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { Button, Form, ListGroup, Container, Row, Col } from "react-bootstrap";
-import 'bootstrap/dist/css/bootstrap.min.css';
+import "bootstrap/dist/css/bootstrap.min.css";
 
 const TodoList = () => {
   const [tasks, setTasks] = useState([]);
@@ -10,44 +10,47 @@ const TodoList = () => {
   const [editText, setEditText] = useState("");
   const [search, setSearch] = useState("");
 
-  const addTask = () => {
+  const addTask = useCallback(() => {
     if (task.trim()) {
-      setTasks([...tasks, { text: task, completed: false }]);
+      setTasks((prevTasks) => [...prevTasks, { text: task, completed: false }]);
       setTask("");
     }
-  };
+  }, [task]);
 
-  const deleteTask = (index) => {
-    setTasks(tasks.filter((_, i) => i !== index));
-  };
+  const deleteTask = useCallback((index) => {
+    setTasks((prevTasks) => prevTasks.filter((_, i) => i !== index));
+  }, []);
 
-  const editTask = (index) => {
+  const editTask = useCallback((index) => {
     setEditingTask(index);
     setEditText(tasks[index].text);
-  };
+  }, [tasks]);
 
-  const saveTask = (index) => {
-    const updatedTasks = [...tasks];
-    updatedTasks[index].text = editText;
-    setTasks(updatedTasks);
+  const saveTask = useCallback((index) => {
+    setTasks((prevTasks) =>
+      prevTasks.map((t, i) => (i === index ? { ...t, text: editText } : t))
+    );
     setEditingTask(null);
-  };
+  }, [editText]);
 
-  const toggleTask = (index) => {
-    const updatedTasks = [...tasks];
-    updatedTasks[index].completed = !updatedTasks[index].completed;
-    setTasks(updatedTasks);
-  };
+  const toggleTask = useCallback((index) => {
+    setTasks((prevTasks) =>
+      prevTasks.map((t, i) =>
+        i === index ? { ...t, completed: !t.completed } : t
+      )
+    );
+  }, []);
 
-  const filteredTasks = tasks.filter((task) => {
-    if (filter === "completed") return task.completed;
-    if (filter === "pending") return !task.completed;
-    return true;
-  }).filter(task => task.text.toLowerCase().includes(search.toLowerCase()));
+  const filteredTasks = useMemo(() => {
+    return tasks
+      .filter((t) => (filter === "completed" ? t.completed : filter === "pending" ? !t.completed : true))
+      .filter((t) => t.text.toLowerCase().includes(search.toLowerCase()));
+  }, [tasks, filter, search]);
 
   return (
     <Container className="mt-4">
       <h2 className="text-center">Simple To-Do List</h2>
+
       <Row className="mb-3">
         <Col md={8}>
           <Form.Control
@@ -63,6 +66,7 @@ const TodoList = () => {
           </Button>
         </Col>
       </Row>
+
       <Row className="mb-3">
         <Col md={8}>
           <Form.Control
@@ -73,25 +77,25 @@ const TodoList = () => {
           />
         </Col>
       </Row>
+
       <Row className="mb-3">
         <Col>
-          <Button variant="secondary" onClick={() => setFilter("all")}>All</Button>{" "}
-          <Button variant="success" onClick={() => setFilter("completed")}>Completed</Button>{" "}
-          <Button variant="warning" onClick={() => setFilter("pending")}>Pending</Button>
+          {["all", "completed", "pending"].map((f) => (
+            <Button key={f} variant={f === "completed" ? "success" : f === "pending" ? "warning" : "secondary"} onClick={() => setFilter(f)}>
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </Button>
+          ))}
         </Col>
       </Row>
+
       <ListGroup>
-        {filteredTasks.map((task, index) => (
+        {filteredTasks.map((t, index) => (
           <ListGroup.Item key={index} className="d-flex justify-content-between align-items-center">
             {editingTask === index ? (
-              <Form.Control
-                type="text"
-                value={editText}
-                onChange={(e) => setEditText(e.target.value)}
-              />
+              <Form.Control type="text" value={editText} onChange={(e) => setEditText(e.target.value)} />
             ) : (
-              <span style={{ textDecoration: task.completed ? "line-through" : "none" }}>
-                {task.text}
+              <span style={{ textDecoration: t.completed ? "line-through" : "none" }}>
+                {t.text}
               </span>
             )}
             <div>
@@ -107,8 +111,8 @@ const TodoList = () => {
                   <Button variant="danger" size="sm" onClick={() => deleteTask(index)}>
                     Delete
                   </Button>{" "}
-                  <Button variant={task.completed ? "secondary" : "success"} size="sm" onClick={() => toggleTask(index)}>
-                    {task.completed ? "Undo" : "Complete"}
+                  <Button variant={t.completed ? "secondary" : "success"} size="sm" onClick={() => toggleTask(index)}>
+                    {t.completed ? "Undo" : "Complete"}
                   </Button>
                 </>
               )}
