@@ -7,10 +7,11 @@ const TodoList = () => {
   const [task, setTask] = useState("");
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
-  const [editingTasks, setEditingTasks] = useState({}); // Stores edit states per task
-  const [editTexts, setEditTexts] = useState({}); // Stores the updated texts per task
+  const [editingTasks, setEditingTasks] = useState({});
+  const [editTexts, setEditTexts] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const tasksPerPage = 5;
 
-  // Save tasks to localStorage
   useEffect(() => {
     localStorage.setItem("tasks", JSON.stringify(tasks));
   }, [tasks]);
@@ -32,19 +33,15 @@ const TodoList = () => {
 
   const toggleTask = useCallback((index) => {
     setTasks((prev) =>
-      prev.map((t, i) =>
-        i === index ? { ...t, completed: !t.completed } : t
-      )
+      prev.map((t, i) => (i === index ? { ...t, completed: !t.completed } : t))
     );
   }, []);
 
-  // Enable edit mode for a specific task
   const editTask = useCallback((index) => {
     setEditingTasks((prev) => ({ ...prev, [index]: true }));
     setEditTexts((prev) => ({ ...prev, [index]: tasks[index].text }));
   }, [tasks]);
 
-  // Save the edited task
   const saveTask = useCallback((index) => {
     if (editTexts[index].trim()) {
       setTasks((prev) =>
@@ -54,13 +51,11 @@ const TodoList = () => {
     }
   }, [editTexts]);
 
-  // Cancel editing and reset the text
   const cancelEdit = useCallback((index) => {
     setEditingTasks((prev) => ({ ...prev, [index]: false }));
     setEditTexts((prev) => ({ ...prev, [index]: tasks[index].text }));
   }, [tasks]);
 
-  // Handle text change in edit mode
   const handleEditChange = useCallback((index, value) => {
     setEditTexts((prev) => ({ ...prev, [index]: value }));
   }, []);
@@ -73,11 +68,16 @@ const TodoList = () => {
       .filter((t) => t.text.toLowerCase().includes(search.toLowerCase()));
   }, [tasks, filter, search]);
 
+  const totalPages = Math.ceil(filteredTasks.length / tasksPerPage);
+  const paginatedTasks = useMemo(() => {
+    const startIndex = (currentPage - 1) * tasksPerPage;
+    return filteredTasks.slice(startIndex, startIndex + tasksPerPage);
+  }, [filteredTasks, currentPage]);
+
   return (
     <Container className="mt-4">
       <h2 className="text-center">Enhanced To-Do List</h2>
 
-      {/* Input Field & Add Button */}
       <Row className="mb-3">
         <Col md={8}>
           <Form.Control
@@ -96,7 +96,6 @@ const TodoList = () => {
         </Col>
       </Row>
 
-      {/* Search Bar */}
       <Row className="mb-3">
         <Col md={8}>
           <Form.Control
@@ -109,7 +108,6 @@ const TodoList = () => {
         </Col>
       </Row>
 
-      {/* Filter Buttons */}
       <Row className="mb-3">
         <Col>
           {["all", "completed", "pending"].map((f) => (
@@ -125,10 +123,9 @@ const TodoList = () => {
         </Col>
       </Row>
 
-      {/* Task List */}
       <ListGroup>
-        {filteredTasks.length > 0 ? (
-          filteredTasks.map((t, index) => (
+        {paginatedTasks.length > 0 ? (
+          paginatedTasks.map((t, index) => (
             <ListGroup.Item key={index} className="d-flex justify-content-between align-items-center">
               {editingTasks[index] ? (
                 <>
@@ -148,12 +145,7 @@ const TodoList = () => {
                 </>
               ) : (
                 <>
-                  <span
-                    style={{
-                      textDecoration: t.completed ? "line-through" : "none",
-                      fontWeight: t.completed ? "bold" : "normal",
-                    }}
-                  >
+                  <span style={{ textDecoration: t.completed ? "line-through" : "none" }}>
                     {t.text}
                   </span>
                   <div>
@@ -175,6 +167,18 @@ const TodoList = () => {
           <p className="text-center text-muted">No tasks found</p>
         )}
       </ListGroup>
+
+      <Row className="mt-3 justify-content-center">
+        <Col md={6} className="text-center">
+          <Button variant="secondary" onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}>
+            Previous
+          </Button>
+          <span className="mx-2">Page {currentPage} of {totalPages}</span>
+          <Button variant="secondary" onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}>
+            Next
+          </Button>
+        </Col>
+      </Row>
     </Container>
   );
 };
